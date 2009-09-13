@@ -27,12 +27,11 @@ bool LatexPlugin::init(PluginSystemInterface *plugin_system)
 	m_str = "<img src='file://%1' alt='%2' /> ";
 
 	m_icon = new QIcon();
-//	m_count = 0;
 
 	m_send_message = emit m_plugin_system->registerEventHandler("Core/ChatWindow/SendLevel1.5", this);
 	m_recieve_message = emit m_plugin_system->registerEventHandler("Core/ChatWindow/ReceiveLevel3", this);
 
-	m_convScript = "kopete_latexconvert.sh";
+	m_convScript = "tex2im.sh";
 
 	return true;
 }
@@ -57,8 +56,6 @@ QString LatexPlugin::handleLatex(const QString &latexFormula)
 	m_tempFiles.append(tempFile);
 	QString fileName = tempFile->fileName();
 
-	QProcess p;
-
 	QString argumentRes = "-r %1x%2";
 	QString argumentOut = "-o %1";
 	//QString argumentFormat = "-fgif";  //we uses gif format because MSN only handle gif
@@ -72,7 +69,23 @@ QString LatexPlugin::handleLatex(const QString &latexFormula)
 
 //	qDebug() << " Rendering " << m_convScript << " " <<  argumentRes.arg(QString::number(hDPI), QString::number(vDPI)) << " " << argumentOut.arg(fileName);
 
-	p.execute(m_convScript, args);
+	QProcess proc;
+
+	proc.start( m_convScript, args);
+
+	if (!proc.waitForStarted())
+	{
+		qDebug() << "tex2im not started!";
+	}
+
+	if (!proc.waitForFinished())
+	{
+		qDebug() << "tex2im not finished!";
+	}
+
+	if( proc.exitCode() )
+		qDebug() << "tex2im failed!";
+
 	return fileName;
 }
 
@@ -100,11 +113,8 @@ void LatexPlugin::processEvent(Event &event)
 				QString mesg = m_str.arg( handleLatex( quotedFormula )).arg( pureFormula );
 				msg->replace(quotedFormula, mesg);
 
-//				m_count++;
 			}
 		}
-
-//		qDebug() << "LaTeX result=" << *msg;
 	}
 }
 

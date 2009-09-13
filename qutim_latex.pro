@@ -11,7 +11,9 @@ QT += core gui network
 TEMPLATE = lib
 CONFIG += silent
 
-INSTALLPATH = /usr/local
+unix:INCLUDEPATH += /usr/include
+
+INSTALLPATH = /usr
 target.path = $$INSTALLPATH/lib/qutim
 
 data.path += $$INSTALLPATH/bin
