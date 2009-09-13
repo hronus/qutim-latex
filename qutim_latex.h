@@ -25,7 +25,6 @@ class QTemporaryFile;
 using namespace qutim_sdk_0_2;
 
 /*!
-  TODO: Cleanup temp images on destruct.
   TODO: Settings( on/off plugin usage ).
   */
 class LatexPlugin : public QObject, SimplePluginInterface, EventHandler
@@ -35,7 +34,7 @@ class LatexPlugin : public QObject, SimplePluginInterface, EventHandler
 
 public:
 	virtual bool init(PluginSystemInterface *plugin_system);
-	virtual void release() {}
+	virtual void release();
 	virtual void processEvent(Event &event);
 	virtual void setProfileName(const QString &profile_name);
 	virtual QString name();

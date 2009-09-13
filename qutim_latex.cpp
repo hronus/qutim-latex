@@ -16,6 +16,7 @@
 #include "qutim_latex.h"
 #include <QProcess>
 #include <QTemporaryFile>
+#include <QFile>
 #include <QDir>
 
 bool LatexPlugin::init(PluginSystemInterface *plugin_system)
@@ -26,7 +27,7 @@ bool LatexPlugin::init(PluginSystemInterface *plugin_system)
 	m_str = "<img src='file://%1' alt='%2' /> ";
 
 	m_icon = new QIcon();
-	m_count = 0;
+//	m_count = 0;
 
 	m_send_message = emit m_plugin_system->registerEventHandler("Core/ChatWindow/SendLevel1.5", this);
 	m_recieve_message = emit m_plugin_system->registerEventHandler("Core/ChatWindow/ReceiveLevel3", this);
@@ -34,6 +35,18 @@ bool LatexPlugin::init(PluginSystemInterface *plugin_system)
 	m_convScript = "kopete_latexconvert.sh";
 
 	return true;
+}
+
+// Cleanup temp images on release.
+void LatexPlugin::release()
+{
+	QStringList files = QDir::temp().entryList(QStringList("qutimlatex*.png"),
+								 QDir::Files | QDir::NoSymLinks);
+
+	foreach( QString file, files )
+	{
+		QFile::remove( QDir::tempPath()+"/"+file );
+	}
 }
 
 QString LatexPlugin::handleLatex(const QString &latexFormula)
@@ -87,7 +100,7 @@ void LatexPlugin::processEvent(Event &event)
 				QString mesg = m_str.arg( handleLatex( quotedFormula )).arg( pureFormula );
 				msg->replace(quotedFormula, mesg);
 
-				m_count++;
+//				m_count++;
 			}
 		}
 
@@ -102,7 +115,7 @@ void LatexPlugin::setProfileName(const QString &profile_name)
 
 QString LatexPlugin::name()
 {
-	return "LaTex formules";
+	return "LaTeX";
 }
 
 QString LatexPlugin::description()
