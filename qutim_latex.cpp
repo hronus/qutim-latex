@@ -48,43 +48,82 @@ void LatexPlugin::release()
 	}
 }
 
+void runProcess( QProcess& proc, const QString& exe, const QStringList args )
+{
+	const QString S = "LaTex plugin: ";
+	proc.start( exe, args);
+
+	if (!proc.waitForStarted())
+	{
+		qDebug() << S << exe << " not started!";
+	}
+
+	if (!proc.waitForFinished())
+	{
+		qDebug() << S << exe << " not finished!";
+	}
+
+	if( proc.exitCode() )
+		qDebug() << S << exe << " failed!";
+}
+
 QString LatexPlugin::handleLatex(const QString &latexFormula)
 {
 	QTemporaryFile *tempFile=new QTemporaryFile();
-	tempFile->setFileTemplate(QDir::tempPath()+"/qutimlatex-XXXXXXXXXXXXXXXX.png");	// replace TempFile on qHash( latexFormula )
+	tempFile->setFileTemplate(QDir::tempPath()+"/qutimlatex-XXXXXXXXX.png");
 	tempFile->open();
 	m_tempFiles.append(tempFile);
 	QString fileName = tempFile->fileName();
 
 	QString argumentRes = "-r %1x%2";
 	QString argumentOut = "-o %1";
-	//QString argumentFormat = "-fgif";  //we uses gif format because MSN only handle gif
+
 	int hDPI, vDPI;
 	hDPI = 150;	//	hDPI = LatexConfig::self()->horizontalDPI();
 	vDPI = 150;	//	vDPI = LatexConfig::self()->verticalDPI();
 
+	QDir dir;
+	const QString tempDir = QDir::tempPath() + "/qutim-latex-temp";
+	dir.mkdir( tempDir );
+	if( !dir.exists( tempDir ) )
+	{
+		qDebug() << "Could not create temp" << tempDir;
+		return QString();
+	}
 
-	QStringList args;
-	args << argumentRes.arg(QString::number(hDPI), QString::number(vDPI)) << argumentOut.arg(fileName) /*<< argumentFormat*/ << latexFormula ;
+	QString tex =  QString(
+	"\\documentclass[12pt]{article}\n"
+	"\\usepackage{color}\n "
+	"\\usepackage[dvips]{graphicx}\n "
+	"\\pagestyle{empty}\n "
+	"\\pagecolor{white}\n "
+	"\\begin{document}\n "
+	"{\\color{black}\n "
+	"\\begin{eqnarray*}\n "
+	"%1 \n"
+	"\\end{eqnarray*}}\n "
+	"\\end{document}\n").arg(latexFormula);
 
-//	qDebug() << " Rendering " << m_convScript << " " <<  argumentRes.arg(QString::number(hDPI), QString::number(vDPI)) << " " << argumentOut.arg(fileName);
+	const QString TeXFile = "out.tex";
+	const QString DviFile = "out.dvi";
+	const QString EpsFile = "out.eps";
+
+	QFile file(tempDir+"/"+TeXFile);
+	file.open( QIODevice::WriteOnly | QIODevice::Truncate );
+	file.write( tex.toLocal8Bit() );
+	file.close();
 
 	QProcess proc;
+	proc.setWorkingDirectory( tempDir );
+	runProcess( proc, "latex", QStringList() << "-interaction=batchmode" << TeXFile );
+	runProcess( proc, "dvips", QStringList() << "-o" << EpsFile << "-E" << DviFile );
 
-	proc.start( m_convScript, args);
+	runProcess( proc, "convert", QStringList() << "+adjoin" << "-antialias" << "-transparent" << "white"
+				<< "-density" << QString("%1x%2").arg(hDPI).arg(vDPI) << EpsFile << fileName );
 
-	if (!proc.waitForStarted())
-	{
-		qDebug() << "tex2im not started!";
-	}
-
-	if (!proc.waitForFinished())
-	{
-		qDebug() << "tex2im not finished!";
-	}
-
-	if( proc.exitCode() )
-		qDebug() << "tex2im failed!";
+	QFileInfoList list = QDir(tempDir).entryInfoList();
+	foreach( QFileInfo f, list)
+		QFile::remove( f.absoluteFilePath());
 
 	return fileName;
 }
@@ -110,7 +149,7 @@ void LatexPlugin::processEvent(Event &event)
 
 				QString quotedFormula = rx.cap(1);
 				QString pureFormula = QString(quotedFormula).replace("$$", "");
-				QString mesg = m_str.arg( handleLatex( quotedFormula )).arg( pureFormula );
+				QString mesg = m_str.arg( handleLatex( pureFormula )).arg( pureFormula );
 				msg->replace(quotedFormula, mesg);
 
 			}
@@ -160,3 +199,4 @@ void LatexPlugin::removeSettingsWidget()
 }
 
 Q_EXPORT_PLUGIN2(LatexPlugin, LatexPlugin);
+

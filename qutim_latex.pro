@@ -16,7 +16,4 @@ unix:INCLUDEPATH += /usr/include
 INSTALLPATH = /usr
 target.path = $$INSTALLPATH/lib/qutim
 
-data.path += $$INSTALLPATH/bin
-data.files += tex2im.sh
-
-INSTALLS = target data
+INSTALLS = target

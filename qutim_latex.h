@@ -58,7 +58,6 @@ private:
 	uint m_count;
 
 	quint16 m_send_message;
-//	quint16 m_send_message_2;
 	quint16 m_recieve_message;
 
 	QString m_str;
