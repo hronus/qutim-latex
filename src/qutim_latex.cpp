@@ -14,8 +14,10 @@
 */
 
 #include "qutim_latex.h"
+#include "settings.h"
 #include <QProcess>
 #include <QTemporaryFile>
+#include <QTextDocument>
 #include <QFile>
 #include <QDir>
 
@@ -24,14 +26,13 @@ bool LatexPlugin::init(PluginSystemInterface *plugin_system)
 	PluginInterface::init(plugin_system);
 	m_plugin_system = plugin_system;
 
+	m_settingsWidget = 0;
 	m_str = "<img src='file://%1' alt='%2' /> ";
 
 	m_icon = new QIcon();
 
 	m_send_message = emit m_plugin_system->registerEventHandler("Core/ChatWindow/SendLevel1.5", this);
 	m_recieve_message = emit m_plugin_system->registerEventHandler("Core/ChatWindow/ReceiveLevel3", this);
-
-	m_convScript = "tex2im.sh";
 
 	return true;
 }
@@ -78,10 +79,6 @@ QString LatexPlugin::handleLatex(const QString &latexFormula)
 	QString argumentRes = "-r %1x%2";
 	QString argumentOut = "-o %1";
 
-	int hDPI, vDPI;
-	hDPI = 150;	//	hDPI = LatexConfig::self()->horizontalDPI();
-	vDPI = 150;	//	vDPI = LatexConfig::self()->verticalDPI();
-
 	QDir dir;
 	const QString tempDir = QDir::tempPath() + "/qutim-latex-temp";
 	dir.mkdir( tempDir );
@@ -115,11 +112,11 @@ QString LatexPlugin::handleLatex(const QString &latexFormula)
 
 	QProcess proc;
 	proc.setWorkingDirectory( tempDir );
-	runProcess( proc, "latex", QStringList() << "-interaction=batchmode" << TeXFile );
-	runProcess( proc, "dvips", QStringList() << "-o" << EpsFile << "-E" << DviFile );
+	runProcess( proc, latexCommand, QStringList() << "-interaction=batchmode" << TeXFile );
+	runProcess( proc, dvipsCommand, QStringList() << "-o" << EpsFile << "-E" << DviFile );
 
-	runProcess( proc, "convert", QStringList() << "+adjoin" << "-antialias" << "-transparent" << "white"
-				<< "-density" << QString("%1x%2").arg(hDPI).arg(vDPI) << EpsFile << fileName );
+	runProcess( proc, convertCommand, QStringList() << "+adjoin" << "-antialias" << "-transparent" << "white"
+				<< "-density" << QString("%1x%2").arg(dpi.width()).arg(dpi.height()) << EpsFile << fileName );
 
 	QFileInfoList list = QDir(tempDir).entryInfoList();
 	foreach( QFileInfo f, list)
@@ -131,6 +128,9 @@ QString LatexPlugin::handleLatex(const QString &latexFormula)
 void LatexPlugin::processEvent(Event &event)
 {
 	if(event.args.size()<1)
+		return;
+
+	if( !m_usable )
 		return;
 
 	if( event.id == m_send_message || event.id == m_recieve_message )
@@ -148,18 +148,33 @@ void LatexPlugin::processEvent(Event &event)
 				pos++;
 
 				QString quotedFormula = rx.cap(1);
-				QString pureFormula = QString(quotedFormula).replace("$$", "");
-				QString mesg = m_str.arg( handleLatex( pureFormula )).arg( pureFormula );
-				msg->replace(quotedFormula, mesg);
 
+				QTextDocument td;
+				td.setHtml( quotedFormula );
+				QString quotedFormulaPlain = td.toPlainText();
+				QString pureFormula = QString(quotedFormulaPlain).replace("$$", "");
+				QString mesg = m_str.arg( handleLatex( pureFormula )).arg( pureFormula );
+
+				msg->replace(quotedFormula, mesg);
 			}
 		}
 	}
 }
 
+/*!
+  @note setProfile must call before processing
+  */
 void LatexPlugin::setProfileName(const QString &profile_name)
 {
 	m_profile_name = profile_name;
+
+	qDebug() << "LaTex profile" << profile_name;
+	QSettings settings(QSettings::defaultFormat(),QSettings::UserScope, "qutim/qutim."+m_profile_name, "qutim-latex");
+	latexCommand = settings.value("latex", "latex").toString();
+	dvipsCommand = settings.value("dvips", "dvips").toString();
+	convertCommand = settings.value("convert", "convert").toString();
+	dpi = settings.value("dpi", QSize(150,150)).toSize();
+	m_usable = settings.value( "usable", true ).toBool();
 }
 
 QString LatexPlugin::name()
@@ -182,20 +197,45 @@ QString LatexPlugin::type()
 	return "view";
 }
 
-void LatexPlugin::saveSettings()
-{
-//	settingswidget->saveSettings();
-}
-
 QWidget *LatexPlugin::settingsWidget()
 {
-	QWidget *settingswidget = new QWidget;
-	return settingswidget;
+	m_settingsWidget = new Settings;
+
+	m_settingsWidget->setLatexCommand( latexCommand );
+	m_settingsWidget->setDvipsCommand( dvipsCommand );
+	m_settingsWidget->setConvertCommand( convertCommand );
+	m_settingsWidget->setDpi( dpi );
+	m_settingsWidget->setUsable( m_usable );
+
+	return m_settingsWidget;
+}
+
+void LatexPlugin::saveSettings()
+{
+	if( !m_settingsWidget )
+		return ;
+
+	QSettings settings(QSettings::defaultFormat(),QSettings::UserScope, "qutim/qutim."+m_profile_name, "qutim-latex");
+
+	latexCommand = m_settingsWidget->latexCommand();
+	settings.setValue("latex", latexCommand);
+
+	dvipsCommand = m_settingsWidget->dvipsCommand();
+	settings.setValue("dvips", dvipsCommand);
+
+	convertCommand = m_settingsWidget->convertCommand();
+	settings.setValue("convert", convertCommand);
+
+	m_usable = m_settingsWidget->usable();
+	settings.setValue( "usable", m_usable );
+
+	dpi = m_settingsWidget->dpi();
+	settings.setValue("dpi", dpi);
 }
 
 void LatexPlugin::removeSettingsWidget()
 {
-//	delete settingsWidget();
+	m_settingsWidget->deleteLater();
 }
 
 Q_EXPORT_PLUGIN2(LatexPlugin, LatexPlugin);

@@ -1,3 +1,9 @@
-qutim-latex is LaTeX plugin for qutIM instant messendger.
+qutim-latex is LaTeX plugin for qutIM instant messenger.
 
 DEPENDENCIES: imagemagick, LaTeX
+
+The qutim-latex plugin allows qutIM to render LaTeX formulas in 
+the chat window. The sender must enclose the formula between two 
+pairs of $ signs. ie: $$formula$$
+
+This plugin requires that the LaTeX be installed in order to work.

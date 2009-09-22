@@ -21,12 +21,10 @@
 #include <QDebug>
 
 class QTemporaryFile;
+class Settings;
 
 using namespace qutim_sdk_0_2;
 
-/*!
-  TODO: Settings( on/off plugin usage ).
-  */
 class LatexPlugin : public QObject, SimplePluginInterface, EventHandler
 {
 	Q_OBJECT
@@ -51,14 +49,22 @@ private:
 	QString handleLatex(const QString &latexFormula);
 
 	PluginSystemInterface *m_plugin_system;
+
+	QString latexCommand;
+	QString dvipsCommand;
+	QString convertCommand;
+	QSize dpi;
+	bool m_usable;
+
+
 	QString m_profile_name;
-	QString m_account_name;
-	QString m_convScript;
 	QIcon *m_icon;
 	uint m_count;
 
 	quint16 m_send_message;
 	quint16 m_recieve_message;
+
+	Settings* m_settingsWidget;
 
 	QString m_str;
 
