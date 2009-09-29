@@ -27,7 +27,7 @@ bool LatexPlugin::init(PluginSystemInterface *plugin_system)
 	m_plugin_system = plugin_system;
 
 	m_settingsWidget = 0;
-	m_str = "<img src='file://%1' alt='%2' /> ";
+	m_str = "<img src='file://%1' alt=\"%2\" /> ";
 
 	m_icon = new QIcon();
 
@@ -92,13 +92,14 @@ QString LatexPlugin::handleLatex(const QString &latexFormula)
 	"\\documentclass[12pt]{article}\n"
 	"\\usepackage{color}\n "
 	"\\usepackage[dvips]{graphicx}\n "
+	"\\setlength{\\parindent}{0mm}"
 	"\\pagestyle{empty}\n "
 	"\\pagecolor{white}\n "
 	"\\begin{document}\n "
 	"{\\color{black}\n "
-	"\\begin{eqnarray*}\n "
-	"%1 \n"
-	"\\end{eqnarray*}}\n "
+	"$\n "
+	"%1 \n"				// что же всё таки использовать?
+	"$\n "
 	"\\end{document}\n").arg(latexFormula);
 
 	const QString TeXFile = "out.tex";
@@ -153,7 +154,8 @@ void LatexPlugin::processEvent(Event &event)
 				td.setHtml( quotedFormula );
 				QString quotedFormulaPlain = td.toPlainText();
 				QString pureFormula = QString(quotedFormulaPlain).replace("$$", "");
-				QString mesg = m_str.arg( handleLatex( pureFormula )).arg( pureFormula );
+				QString mesg = m_str.arg( handleLatex( pureFormula ))
+							.arg( QString(pureFormula).remove("\n").remove("\r") );
 
 				msg->replace(quotedFormula, mesg);
 			}
